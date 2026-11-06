@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000">
+<title>​</title>
+<style>
+  html,body{margin:0;height:100%;background:#000;overflow:hidden}
+  video{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;transform:scaleX(-1);background:#000}
+  select{position:fixed;top:calc(env(safe-area-inset-top) + 10px);left:50%;transform:translateX(-50%);
+    max-width:80vw;font-size:16px;color:#fff;background:rgba(0,0,0,.45);border:1px solid rgba(255,255,255,.3);
+    border-radius:10px;padding:8px 12px;-webkit-appearance:none;appearance:none;text-align:center;z-index:1}
+</style>
+</head>
+<body>
+<video id="v" autoplay muted playsinline></video>
+<select id="s"></select>
+<script>
+const v = document.getElementById('v'), s = document.getElementById('s');
+let stream;
+
+async function start(deviceId) {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  const video = deviceId
+    ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+    : { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } };
+  stream = await navigator.mediaDevices.getUserMedia({ video, audio: false });
+  v.srcObject = stream;
+  v.play().catch(() => {});
+}
+
+async function list() {
+  const cams = (await navigator.mediaDevices.enumerateDevices()).filter(d => d.kind === 'videoinput');
+  const cur = stream && stream.getVideoTracks()[0].getSettings().deviceId;
+  s.innerHTML = '';
+  cams.forEach((d, i) => {
+    const o = document.createElement('option');
+    o.value = d.deviceId;
+    o.textContent = d.label || String(i + 1);
+    if (d.deviceId === cur) o.selected = true;
+    s.appendChild(o);
+  });
+  s.style.display = cams.length > 1 ? '' : 'none';
+}
+
+s.onchange = () => start(s.value).then(list).catch(console.error);
+navigator.mediaDevices.addEventListener('devicechange', list);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) v.play().catch(() => {}); });
+start().then(list).catch(console.error);
+</script>
+</body>
+</html>
